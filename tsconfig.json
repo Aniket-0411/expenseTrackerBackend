@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+        "allowJs": true,
+      "module": "ES6",
+      "esModuleInterop": true,
+      "target": "ESNext",
+      "moduleResolution": "node",
+      "sourceMap": true,
+      "outDir": "./build",
+      "importHelpers": true,
+      "noImplicitAny": true,
+      "baseUrl": "./",
+        "paths": {
+        "~/*": ["src/*"],
+        "~/config/*": ["src/config/*"],
+        "~/model/*": ["src/model/*"],
+        "~/controller/*": ["src/controller/*"],
+        "~/api/*": ["src/controller/api/*"],
+        "~/mqtt/*": ["src/controller/mqtt/*"]
+        }
+  },
+  "typeRoots": [
+    "node_modules/@types"
+  ],
+  "include": [
+      "src/**/*"
+  ],
+  "compileOnSave": true,
+}
