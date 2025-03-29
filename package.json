@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "start": "nodemon --exec ts-node src/server.ts",
-    "dev:server": "nodemon --watch './**/*.ts' --exec \"C:\\nvm4w\\nodejs\\node.exe --experimental-specifier-resolution=node --trace-warnings --loader ts-node/esm\" src/server.ts",
+    "dev:server": "nodemon --watch './**/*.ts' --exec \"node --experimental-specifier-resolution=node --trace-warnings --loader ts-node/esm\" src/server.ts",
     "format": "prettier --write \"app/**/*.{js,jsx,json,md,ts,tsx}\"",
     "lint": "eslint index.js App.js app --fix --ext .js,.ts,.tsx  --max-warnings 0 && yarn format",
     "start:server": "pm2 start src/server.ts --name my-node-app --interpreter ts-node",
@@ -49,6 +49,7 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^6.10.0",
     "pdfkit": "^0.16.0",
+    "the-date-crew-backend": "file:",
     "together-ai": "^0.13.0",
     "uuid": "^11.1.0"
   }
