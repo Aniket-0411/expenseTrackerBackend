@@ -52,12 +52,48 @@ import { handleGetInvoiceData } from "./utility/getInvoiceData";
 import { handleGetEmailExpense } from "./utility/getEmailExpense";
 import { initializeEmailCronJob } from "./utility/cronScheduler";
 import { generateExpenseReport, sendExpenseReportByEmail, getCurrentMonth } from "./utility/expenseReport";
-import { UserModel } from "./model";
+import { UserModel, ReceiptModel } from "./model";
 
 app.post("/invoice", async (req: Request, res: Response) => {
-  const imageUrl = req.body.imageURL;
-  const invoiceData = await handleGetInvoiceData(imageUrl);
-  res.json(invoiceData);
+  try {
+    const imageUrl = req.body.imageURL;
+    const userId = req.body.userId;
+    
+    // Process the invoice to get data
+    const invoiceData = await handleGetInvoiceData(imageUrl);
+    
+    // If userId is provided, store the image URL in receipts
+    if (userId) {
+      // Check if user exists
+      const user = await UserModel.findOne({ userId });
+      if (user) {
+        // Create new receipt with just the image URL
+        const newReceipt = new ReceiptModel({
+          userId,
+          imageUrl,
+          date: new Date()
+        });
+        
+        // Save receipt to database
+        await newReceipt.save();
+        
+        // Add receipt info to the response
+        invoiceData.receipt = {
+          id: newReceipt._id.toString(),
+          imageUrl: newReceipt.imageUrl,
+          date: newReceipt.date
+        };
+      }
+    }
+    
+    res.json(invoiceData);
+  } catch (error: any) {
+    console.error("Error processing invoice:", error);
+    res.status(500).json({
+      error: "Failed to process invoice",
+      message: error.message
+    });
+  }
 });
 
 app.post("/email-expense", async (req: Request, res: Response) => {
@@ -80,8 +116,8 @@ app.post("/email-expense", async (req: Request, res: Response) => {
 
 // Google OAuth2 client setup
 const auth_ = new google.auth.OAuth2(
-  process.env.CLIENT_ID,
-  process.env.CLIENT_SECRET,
+  process.env.CLIENT_ID ,
+  process.env.CLIENT_SECRET ,
   process.env.REDIRECT_URI
 );
 
@@ -254,11 +290,9 @@ app.post("/expenses/bulk", async (req, res) => {
 app.get("/expenses/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
-    const { month = 'March' } = req.query;
+    const { month = 'March', startDate, endDate } = req.query;
 
-    console.log(req.query, month, "fjnksnkjc☄️☄️☄️☄️");
-    
-    console.log(`Fetching expenses for user: ${userId}${month ? `, month: ${month}` : ''}`);
+    console.log(`Fetching expenses for user: ${userId}${month ? `, month: ${month}` : ''}${startDate ? `, from: ${startDate}` : ''}${endDate ? `, to: ${endDate}` : ''}`);
     
     const user = await UserModel.findOne({ userId });
 
@@ -266,14 +300,35 @@ app.get("/expenses/:userId", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // If month is provided, filter expenses by month
-    if (month && typeof month === 'string') {
-      const filteredExpenses = user.expenses.filter(expense => expense.month === month);
-      return res.json(filteredExpenses);
+    // Create a copy of expenses to avoid modifying the original array
+    let expensesToReturn = [...user.expenses];
+    
+    // If date range is provided, filter expenses by date range
+    if (startDate || endDate) {
+      const start = startDate ? new Date(startDate as string).getTime() : 0;
+      const end = endDate ? new Date(endDate as string).getTime() : Date.now();
+      
+      expensesToReturn = expensesToReturn.filter(expense => {
+        const expenseTime = new Date(expense.time).getTime();
+        return expenseTime >= start && expenseTime <= end;
+      });
+      
+      console.log(`Filtered by date range: ${startDate || 'beginning'} to ${endDate || 'now'}, found ${expensesToReturn.length} expenses`);
     }
-
-    // If no month filter, return all expenses
-    res.json(user.expenses);
+    // If only month is provided (and no date range), filter expenses by month
+    else if (month && typeof month === 'string') {
+      expensesToReturn = expensesToReturn.filter(expense => expense.month === month);
+    }
+    
+    // Sort expenses by time in descending order (newest first)
+    expensesToReturn.sort((a, b) => {
+      const dateA = new Date(a.time).getTime();
+      const dateB = new Date(b.time).getTime();
+      return dateB - dateA; // Descending order (newest first)
+    });
+    
+    // Return the sorted expenses
+    res.json(expensesToReturn);
   } catch (error) {
     console.error("Error fetching expenses:", error);
     res.status(500).json({ error: "Failed to fetch expenses" });
@@ -444,7 +499,42 @@ app.post("/expense-report/email", async (req, res) => {
     console.error("Error sending expense report by email:", error);
     res.status(500).json({ 
       error: "Failed to send expense report", 
-      message: error.message 
+      message: error.message
+    });
+  }
+});
+
+// Get all invoice images for a user
+app.get("/invoice-images/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    if (!userId) {
+      return res.status(400).json({ error: "User ID is required" });
+    }
+
+    // Check if user exists
+    const user = await UserModel.findOne({ userId });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Get all receipts for the user
+    const receipts = await ReceiptModel.find({ userId }).sort({ date: -1 });
+
+    // Extract just the image URLs and minimal info
+    const invoiceImages = receipts.map(receipt => ({
+      id: receipt._id.toString(),
+      imageUrl: receipt.imageUrl,
+      date: receipt.date
+    }));
+
+    res.json(invoiceImages);
+  } catch (error: any) {
+    console.error("Error fetching invoice images:", error);
+    res.status(500).json({
+      error: "Failed to fetch invoice images",
+      message: error.message
     });
   }
 });

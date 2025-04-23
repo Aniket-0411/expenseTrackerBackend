@@ -9,6 +9,11 @@ interface InvoiceItem {
 interface InvoiceData {
   total: number;
   items: InvoiceItem[];
+  receipt?: {
+    id: string;
+    imageUrl: string;
+    date: Date;
+  };
 }
 
 function extractItemsFromMarkdown(text: string): InvoiceData | null {
