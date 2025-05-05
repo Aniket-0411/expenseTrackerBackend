@@ -32,9 +32,9 @@ app.get("/ping", (req: Request, res: Response) => {
   res.json({ greeting: "Server Is In Good Health!" });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(
-    `🚀 server started at http://localhost:${PORT}, ${process.env.JWT_TOKEN_SECRET}`
+    `🚀 server started at http://0.0.0.0:${PORT} (secret: ${process.env.JWT_TOKEN_SECRET})`
   );
   
   // Initialize email cron job
