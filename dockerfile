@@ -1,16 +1,17 @@
 FROM node:18-alpine
-
 WORKDIR /app
 
-# copy package manifests and install dependencies
+# install all dependencies (incl. dev for ts-node & nodemon)
 COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
+RUN yarn install
 
-# copy source
+# copy source for dev
 COPY . .
 
-# adjust the port if needed
-EXPOSE 3000
+# allow more heap for ts-node
+ENV NODE_OPTIONS=--max_old_space_size=4096
 
-# start in dev mode
+EXPOSE 8080
+
+# launch your dev server
 CMD ["yarn", "run", "dev:server"]
